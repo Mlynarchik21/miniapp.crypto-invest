@@ -59,9 +59,9 @@ function isSubscribed(status: string) {
   return status === "member" || status === "administrator" || status === "creator";
 }
 
-// Заглушка: тут потом подключим БД/бота, сейчас просто возвращаем результат
+// Заглушка под сохранение user_id (БД подключим позже)
 function saveUserToLog(user: any) {
-  console.log("USER_SAVE:", user);
+  console.log("USER:", user);
 }
 
 export async function POST(req: Request) {
