@@ -20,7 +20,7 @@ function getStartAppSource() {
   return startParam ? String(startParam) : null;
 }
 
-function Dots({ speedMs = 450 }: { speedMs?: number }) {
+function Dots({ speedMs = 520 }: { speedMs?: number }) {
   const [n, setN] = useState(1);
   useEffect(() => {
     const t = setInterval(() => setN((x) => (x % 3) + 1), speedMs);
@@ -36,23 +36,22 @@ function clamp(n: number, min: number, max: number) {
 export default function Page() {
   const [screen, setScreen] = useState<Screen>("loading");
   const [phase, setPhase] = useState<Phase>("loading");
-  const [progress, setProgress] = useState(6);
+  const [progress, setProgress] = useState(2);
   const [userId, setUserId] = useState<number | null>(null);
 
   const [gateHint, setGateHint] = useState<string | null>(null);
 
-  // ✅ твоя ссылка на канал
+  // ✅ ссылка на канал
   const channelLink = useMemo(() => "https://t.me/+UY4Pyf9PFpxjNWU6", []);
 
   const mounted = useRef(false);
 
-  // ===== UI helpers =====
+  // ===== Theme =====
   const BG = "#000000";
-  const CardBG = "rgba(255,255,255,0.05)";
-  const Border = "rgba(255,255,255,0.10)";
   const Text = "rgba(255,255,255,0.92)";
   const Muted = "rgba(255,255,255,0.60)";
-  const Purple = "#8B5CF6"; // фиолетовый акцент
+  const Muted2 = "rgba(255,255,255,0.45)";
+  const Purple = "#8B5CF6";
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
     <div
@@ -64,21 +63,7 @@ export default function Page() {
         padding: 18
       }}
     >
-      <div style={{ maxWidth: 520, margin: "0 auto", paddingTop: 10 }}>{children}</div>
-    </div>
-  );
-
-  const Card = ({ children }: { children: React.ReactNode }) => (
-    <div
-      style={{
-        borderRadius: 18,
-        padding: 16,
-        background: CardBG,
-        border: `1px solid ${Border}`,
-        boxShadow: "0 14px 40px rgba(0,0,0,0.55)"
-      }}
-    >
-      {children}
+      <div style={{ maxWidth: 520, margin: "0 auto" }}>{children}</div>
     </div>
   );
 
@@ -97,16 +82,21 @@ export default function Page() {
         width: "100%",
         padding: "12px 14px",
         borderRadius: 14,
-        border: `1px solid ${variant === "primary" ? "rgba(139,92,246,0.55)" : Border}`,
+        border: "1px solid rgba(255,255,255,0.10)",
         background:
           variant === "primary"
-            ? `linear-gradient(135deg, rgba(139,92,246,0.85), rgba(139,92,246,0.35))`
+            ? `linear-gradient(135deg, rgba(139,92,246,0.95), rgba(139,92,246,0.35))`
             : "rgba(255,255,255,0.06)",
         color: "rgba(255,255,255,0.95)",
         cursor: "pointer",
         fontSize: 15,
-        letterSpacing: 0.2
+        letterSpacing: 0.2,
+        transition: "transform 120ms ease, filter 120ms ease",
+        filter: "saturate(1.02)"
       }}
+      onMouseDown={(e) => ((e.currentTarget.style.transform = "scale(0.99)"), (e.currentTarget.style.filter = "saturate(1.1)"))}
+      onMouseUp={(e) => ((e.currentTarget.style.transform = "scale(1)"), (e.currentTarget.style.filter = "saturate(1.02)"))}
+      onMouseLeave={(e) => ((e.currentTarget.style.transform = "scale(1)"), (e.currentTarget.style.filter = "saturate(1.02)"))}
     >
       {children}
     </button>
@@ -126,10 +116,10 @@ export default function Page() {
     );
   }
 
-  // ===== Loading animation logic =====
+  // ===== smoother, longer progress =====
   useEffect(() => {
-    // прогресс мягко растёт сам, без резких скачков
     if (screen !== "loading") return;
+
     let raf = 0;
     let t0 = performance.now();
 
@@ -138,12 +128,10 @@ export default function Page() {
       t0 = t;
 
       setProgress((p) => {
-        // пока "loading" — растём до 55
-        if (phase === "loading") return clamp(p + dt * 14, 6, 55);
-        // пока "checking" — растём до 88
-        if (phase === "checking") return clamp(p + dt * 10, 55, 88);
-        // done — до 100
-        return clamp(p + dt * 40, 88, 100);
+        // более длинные стадии
+        if (phase === "loading") return clamp(p + dt * 6.5, 2, 60);   // медленно до 60%
+        if (phase === "checking") return clamp(p + dt * 4.2, 60, 92); // ещё медленнее до 92%
+        return clamp(p + dt * 18, 92, 100);                            // мягко в 100%
       });
 
       raf = requestAnimationFrame(tick);
@@ -154,24 +142,25 @@ export default function Page() {
   }, [screen, phase]);
 
   async function checkSubscription() {
-    // 1) стадия загрузки (короткая)
     setScreen("loading");
     setPhase("loading");
     setGateHint(null);
 
-    // небольшая пауза чтобы анимация “успела начаться”
-    await new Promise((r) => setTimeout(r, 450));
+    // Даем пользователю увидеть анимацию
+    await new Promise((r) => setTimeout(r, 900));
     setPhase("checking");
 
     const initData = getInitData();
     const source = getStartAppSource();
 
+    // ещё немного времени на "checking" — чтобы анимация выглядела дороже
+    await new Promise((r) => setTimeout(r, 1100));
+
     if (!initData) {
-      // без лишнего текста: просто переводим в gate
       setPhase("done");
       setProgress(100);
-      await new Promise((r) => setTimeout(r, 250));
-      setGateHint("Открой Mini App через кнопку Open в боте.");
+      await new Promise((r) => setTimeout(r, 550));
+      setGateHint("Похоже, приложение открылось без данных Telegram. Нажми Open внутри бота и попробуй снова.");
       setScreen("gate");
       return;
     }
@@ -187,8 +176,8 @@ export default function Page() {
     if (!j?.ok) {
       setPhase("done");
       setProgress(100);
-      await new Promise((r) => setTimeout(r, 250));
-      setGateHint("Проверка не прошла. Нажми «Проверить» ещё раз.");
+      await new Promise((r) => setTimeout(r, 550));
+      setGateHint("Не получилось подтвердить доступ с первого раза. Давай попробуем ещё раз.");
       setScreen("gate");
       return;
     }
@@ -196,19 +185,17 @@ export default function Page() {
     setUserId(Number(j.user_id));
 
     if (j.subscribed) {
-      // плавно добиваем прогресс и идём дальше
       setPhase("done");
       setProgress(100);
-      await new Promise((r) => setTimeout(r, 350));
+      await new Promise((r) => setTimeout(r, 650));
       setScreen("courses");
       return;
     }
 
-    // не подписан
     setPhase("done");
     setProgress(100);
-    await new Promise((r) => setTimeout(r, 250));
-    setGateHint("Курсы уже ждут тебя — осталось совсем чуть-чуть 🙂");
+    await new Promise((r) => setTimeout(r, 550));
+    setGateHint(null);
     setScreen("gate");
   }
 
@@ -224,98 +211,123 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ===== Screens =====
-
+  // ===== Loading Screen =====
   if (screen === "loading") {
     return (
       <Shell>
-        <div style={{ textAlign: "center", paddingTop: 80 }}>
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 999,
-              margin: "0 auto 18px",
-              border: "4px solid rgba(139,92,246,0.18)",
-              borderTopColor: Purple,
-              animation: "spin 0.9s linear infinite"
-            }}
-          />
-          <PhaseText />
-
-          <div style={{ height: 18 }} />
-
-          <div
-            style={{
-              width: "100%",
-              maxWidth: 420,
-              margin: "0 auto",
-              height: 10,
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.06)",
-              border: `1px solid ${Border}`,
-              overflow: "hidden"
-            }}
-          >
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "grid",
+            placeItems: "center"
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
             <div
               style={{
-                height: "100%",
-                width: `${Math.round(progress)}%`,
-                background: `linear-gradient(90deg, rgba(139,92,246,0.95), rgba(139,92,246,0.35))`,
-                boxShadow: "0 0 18px rgba(139,92,246,0.35)",
-                transition: "width 120ms linear"
+                width: 46,
+                height: 46,
+                borderRadius: 999,
+                margin: "0 auto 18px",
+                border: "4px solid rgba(139,92,246,0.14)",
+                borderTopColor: Purple,
+                animation: "spin 1.1s linear infinite"
               }}
             />
-          </div>
 
-          <div style={{ marginTop: 10, fontSize: 12, color: "rgba(255,255,255,0.45)" }}>
-            {Math.round(progress)}%
-          </div>
+            <PhaseText />
 
-          <style>{`
-            @keyframes spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
+            <div style={{ height: 18 }} />
+
+            <div
+              style={{
+                width: "100%",
+                height: 10,
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.05)",
+                overflow: "hidden"
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${Math.round(progress)}%`,
+                  background: `linear-gradient(90deg, rgba(139,92,246,0.95), rgba(255,255,255,0.18))`,
+                  boxShadow: "0 0 22px rgba(139,92,246,0.25)",
+                  transition: "width 180ms linear"
+                }}
+              />
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 12, color: Muted2 }}>{Math.round(progress)}%</div>
+
+            <style>{`
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
         </div>
       </Shell>
     );
   }
 
+  // ===== Gate Screen (center, modern, no card) =====
   if (screen === "gate") {
     return (
       <Shell>
-        <Card>
-          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0.2 }}>Доступ</div>
-          <div style={{ marginTop: 8, color: Muted, lineHeight: 1.5, fontSize: 13 }}>
-            {gateHint ?? "Подпишись на канал и нажми «Проверить»."}
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "grid",
+            placeItems: "center"
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+            <div style={{ fontSize: 26, fontWeight: 850, letterSpacing: 0.2 }}>Упс</div>
+
+            <div style={{ marginTop: 10, fontSize: 14, color: Muted, lineHeight: 1.6 }}>
+              Ты, похоже, ещё не подписался на наш канал.
+              <br />
+              Ничего страшного — сейчас быстро исправим 🙂
+            </div>
+
+            <div style={{ marginTop: 14, fontSize: 14, color: Muted, lineHeight: 1.6 }}>
+              Курсы уже ждут тебя — осталось совсем чуть-чуть.
+            </div>
+
+            {gateHint ? (
+              <div style={{ marginTop: 14, fontSize: 13, color: "rgba(255,255,255,0.52)", lineHeight: 1.55 }}>
+                {gateHint}
+              </div>
+            ) : null}
+
+            <div style={{ height: 22 }} />
+
+            <a href={channelLink} style={{ textDecoration: "none" }}>
+              <Btn variant="primary">Подписаться</Btn>
+            </a>
+
+            <div style={{ height: 10 }} />
+
+            <Btn onClick={checkSubscription}>Проверить подписку</Btn>
+
+            <div style={{ marginTop: 14, fontSize: 12, color: "rgba(255,255,255,0.32)" }}>
+              ID: {userId ?? "—"}
+            </div>
           </div>
-
-          <div style={{ height: 14 }} />
-
-          <a href={channelLink} style={{ textDecoration: "none" }}>
-            <Btn variant="primary">Подписаться</Btn>
-          </a>
-
-          <div style={{ height: 10 }} />
-
-          <Btn onClick={checkSubscription}>Проверить подписку</Btn>
-
-          <div style={{ marginTop: 12, fontSize: 12, color: "rgba(255,255,255,0.45)" }}>
-            ID: {userId ?? "—"}
-          </div>
-        </Card>
+        </div>
       </Shell>
     );
   }
 
-  // ===== Courses mock =====
+  // ===== Courses mock (strict, minimal) =====
   return (
     <Shell>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
+      <div style={{ paddingTop: 18, paddingBottom: 8, display: "flex", alignItems: "baseline", gap: 10 }}>
         <div style={{ fontSize: 18, fontWeight: 850, letterSpacing: 0.2 }}>Курсы</div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: "rgba(255,255,255,0.45)" }}>ID: {userId ?? "—"}</div>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: Muted2 }}>ID: {userId ?? "—"}</div>
       </div>
 
       <div style={{ display: "grid", gap: 12 }}>
@@ -329,20 +341,19 @@ export default function Page() {
             style={{
               borderRadius: 18,
               padding: 16,
-              background: CardBG,
-              border: `1px solid ${Border}`
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)"
             }}
           >
-            <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: 0.2 }}>{c.title}</div>
-            <div style={{ marginTop: 6, fontSize: 13, color: Muted, lineHeight: 1.45 }}>{c.desc}</div>
+            <div style={{ fontSize: 15, fontWeight: 850, letterSpacing: 0.2 }}>{c.title}</div>
+            <div style={{ marginTop: 6, fontSize: 13, color: Muted, lineHeight: 1.5 }}>{c.desc}</div>
 
             <div style={{ height: 12 }} />
 
             <Btn
               variant="primary"
               onClick={() => {
-                // макет
-                alert("Макет курса. Контент подключим позже.");
+                alert("Это макет. Контент подключим позже.");
               }}
             >
               Открыть
