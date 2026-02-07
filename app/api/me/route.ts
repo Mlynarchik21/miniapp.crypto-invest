@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-
 export const runtime = "nodejs";
 
 export async function GET() {
@@ -12,5 +11,13 @@ export async function GET() {
   const r = await fetch(`https://api.telegram.org/bot${botToken}/getMe`, { cache: "no-store" });
   const j = await r.json().catch(() => null);
 
-  return NextResponse.json({ ok: true, result: j }, { status: 200 });
+  return NextResponse.json(
+    {
+      ok: true,
+      bot_username: j?.result?.username ?? null,
+      bot_id: j?.result?.id ?? null,
+      raw: j
+    },
+    { status: 200 }
+  );
 }
