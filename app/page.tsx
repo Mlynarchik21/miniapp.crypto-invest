@@ -43,20 +43,17 @@ export default function Page() {
   const [screen, setScreen] = useState<Screen>("loading");
   const [phase, setPhase] = useState<Phase>("loading");
   const [progress, setProgress] = useState(2);
-  const [userId, setUserId] = useState<number | null>(null);
-
-  const [gateHint, setGateHint] = useState<string | null>(null);
-
-  // ✅ ссылка на канал
-  const channelLink = useMemo(() => "https://t.me/+UY4Pyf9PFpxjNWU6", []);
-
   const mounted = useRef(false);
+
+  const channelLink = useMemo(
+    () => "https://t.me/+UY4Pyf9PFpxjNWU6",
+    []
+  );
 
   // ===== Theme =====
   const BG = "#000000";
   const Text = "rgba(255,255,255,0.92)";
   const Muted = "rgba(255,255,255,0.60)";
-  const Muted2 = "rgba(255,255,255,0.45)";
   const Purple = "#8B5CF6";
 
   const Shell = ({ children }: { children: React.ReactNode }) => (
@@ -95,22 +92,7 @@ export default function Page() {
             : "rgba(255,255,255,0.06)",
         color: "rgba(255,255,255,0.95)",
         cursor: "pointer",
-        fontSize: 15,
-        letterSpacing: 0.2,
-        transition: "transform 120ms ease, filter 120ms ease",
-        filter: "saturate(1.02)"
-      }}
-      onMouseDown={(e) => {
-        e.currentTarget.style.transform = "scale(0.99)";
-        e.currentTarget.style.filter = "saturate(1.1)";
-      }}
-      onMouseUp={(e) => {
-        e.currentTarget.style.transform = "scale(1)";
-        e.currentTarget.style.filter = "saturate(1.02)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "scale(1)";
-        e.currentTarget.style.filter = "saturate(1.02)";
+        fontSize: 15
       }}
     >
       {children}
@@ -124,14 +106,14 @@ export default function Page() {
       done: "Готово"
     };
     return (
-      <div style={{ fontSize: 13, color: Muted, letterSpacing: 0.2 }}>
+      <div style={{ fontSize: 13, color: Muted }}>
         {map[phase]}
         {phase !== "done" ? <Dots /> : null}
       </div>
     );
   }
 
-  // ===== smoother, longer progress =====
+  // ===== Progress =====
   useEffect(() => {
     if (screen !== "loading") return;
 
@@ -158,7 +140,6 @@ export default function Page() {
   async function checkSubscription() {
     setScreen("loading");
     setPhase("loading");
-    setGateHint(null);
 
     await new Promise((r) => setTimeout(r, 900));
     setPhase("checking");
@@ -169,12 +150,6 @@ export default function Page() {
     await new Promise((r) => setTimeout(r, 1100));
 
     if (!initData) {
-      setPhase("done");
-      setProgress(100);
-      await new Promise((r) => setTimeout(r, 550));
-      setGateHint(
-        "Похоже, приложение открылось без данных Telegram. Нажми Open внутри бота и попробуй снова."
-      );
       setScreen("gate");
       return;
     }
@@ -187,32 +162,14 @@ export default function Page() {
 
     const j = await r.json().catch(() => null);
 
-    if (!j?.ok) {
-      setPhase("done");
-      setProgress(100);
-      await new Promise((r) => setTimeout(r, 550));
-      setGateHint("Не получилось подтвердить доступ с первого раза. Давай попробуем ещё раз.");
-      setScreen("gate");
-      return;
-    }
-
-    setUserId(Number(j.user_id));
-
-    if (j.subscribed) {
-      setPhase("done");
-      setProgress(100);
-      await new Promise((r) => setTimeout(r, 650));
+    if (j?.subscribed) {
       setScreen("courses");
-      return;
+    } else {
+      setScreen("gate");
     }
-
-    setPhase("done");
-    setProgress(100);
-    await new Promise((r) => setTimeout(r, 550));
-    setGateHint(null);
-    setScreen("gate");
   }
 
+  // ===== INIT + TRACK OPEN =====
   useEffect(() => {
     if (mounted.current) return;
     mounted.current = true;
@@ -221,21 +178,28 @@ export default function Page() {
     w?.ready?.();
     w?.expand?.();
 
+    // ✅ фиксируем Open
+    const initData = (window as any)?.Telegram?.WebApp?.initData;
+
+    if (initData) {
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          initData,
+          action: "open"
+        })
+      }).catch(() => {});
+    }
+
     checkSubscription();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ===== Loading Screen =====
+  // ===== Loading =====
   if (screen === "loading") {
     return (
       <Shell>
-        <div
-          style={{
-            minHeight: "100vh",
-            display: "grid",
-            placeItems: "center"
-          }}
-        >
+        <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
           <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
             <div
               style={{
@@ -266,84 +230,68 @@ export default function Page() {
                 style={{
                   height: "100%",
                   width: `${Math.round(progress)}%`,
-                  background: `linear-gradient(90deg, rgba(139,92,246,0.95), rgba(255,255,255,0.18))`,
-                  boxShadow: "0 0 22px rgba(139,92,246,0.25)",
-                  transition: "width 180ms linear"
+                  background: `linear-gradient(90deg, rgba(139,92,246,0.95), rgba(255,255,255,0.18))`
                 }}
               />
             </div>
-
-            <div style={{ marginTop: 10, fontSize: 12, color: Muted2 }}>
-              {Math.round(progress)}%
-            </div>
-
-            <style>{`
-              @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
           </div>
         </div>
       </Shell>
     );
   }
 
-  // ===== Gate Screen (center, modern, no ID) =====
+  // ===== Gate =====
   if (screen === "gate") {
     return (
       <Shell>
-        <div
-          style={{
-            minHeight: "100vh",
-            display: "grid",
-            placeItems: "center"
-          }}
-        >
+        <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
           <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-            <div style={{ fontSize: 26, fontWeight: 850, letterSpacing: 0.2 }}>
-              Упс
-            </div>
+            <div style={{ fontSize: 26, fontWeight: 850 }}>Упс</div>
 
-            <div style={{ marginTop: 10, fontSize: 14, color: Muted, lineHeight: 1.6 }}>
-              Ты, похоже, ещё не подписался на наш канал.
+            <div style={{ marginTop: 10, fontSize: 14, color: Muted }}>
+              Ты ещё не подписан на канал.
               <br />
-              Ничего страшного — сейчас быстро исправим 🙂
+              Подпишись и получи доступ к курсам.
             </div>
-
-            <div style={{ marginTop: 14, fontSize: 14, color: Muted, lineHeight: 1.6 }}>
-              Курсы уже ждут тебя — осталось совсем чуть-чуть.
-            </div>
-
-            {gateHint ? (
-              <div
-                style={{
-                  marginTop: 14,
-                  fontSize: 13,
-                  color: "rgba(255,255,255,0.52)",
-                  lineHeight: 1.55
-                }}
-              >
-                {gateHint}
-              </div>
-            ) : null}
 
             <div style={{ height: 22 }} />
 
-            <a href={channelLink} style={{ textDecoration: "none" }}>
-              <Btn variant="primary">Подписаться</Btn>
-            </a>
+            {/* ✅ TRACK SUBSCRIBE CLICK */}
+            <Btn
+              variant="primary"
+              onClick={() => {
+                const initData =
+                  (window as any)?.Telegram?.WebApp?.initData;
+
+                if (initData) {
+                  fetch("/api/track", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      initData,
+                      action: "subscribe_click"
+                    })
+                  }).catch(() => {});
+                }
+
+                window.location.href = channelLink;
+              }}
+            >
+              Подписаться
+            </Btn>
 
             <div style={{ height: 10 }} />
 
-            <Btn onClick={checkSubscription}>Проверить подписку</Btn>
+            <Btn onClick={checkSubscription}>
+              Проверить подписку
+            </Btn>
           </div>
         </div>
       </Shell>
     );
   }
 
-  // ===== Courses (empty / marketing check screen, centered, no ID) =====
+  // ===== Courses Stub =====
   return (
     <Shell>
       <div
@@ -352,41 +300,26 @@ export default function Page() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          textAlign: "center",
-          padding: "0 12px"
+          textAlign: "center"
         }}
       >
         <div
           style={{
             maxWidth: 420,
-            width: "100%",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: 14
           }}
         >
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 900,
-              letterSpacing: 0.3,
-              lineHeight: 1.2
-            }}
-          >
+          <div style={{ fontSize: 28, fontWeight: 900 }}>
             Курсов здесь нет
           </div>
 
-          <div
-            style={{
-              fontSize: 14,
-              color: Muted,
-              lineHeight: 1.7
-            }}
-          >
+          <div style={{ fontSize: 14, color: Muted, lineHeight: 1.7 }}>
             Это была проверка нашей маркетинговой стратегии.
             <br />
-            Спасибо, что прошёл этот путь до конца — ты помог нам протестировать гипотезу.
+            Спасибо, что дошёл до этого шага.
           </div>
 
           <div
@@ -396,12 +329,10 @@ export default function Page() {
               lineHeight: 1.6
             }}
           >
-            Приносим извинения за возможные ожидания.
+            Приносим извинения за ожидания.
             <br />
-            В ближайшее время здесь появится настоящий контент.
+            Скоро здесь появится настоящий контент.
           </div>
-
-          <div style={{ height: 6 }} />
 
           <div style={{ width: "100%", maxWidth: 260 }}>
             <Btn
