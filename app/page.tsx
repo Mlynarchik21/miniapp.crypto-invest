@@ -25,8 +25,8 @@ function getStartAppSource() {
 export default function Page() {
   const [view, setView] = useState<View>({ stage: "loading" });
 
-  // ✅ поменяй на свой канал
-  const channelLink = useMemo(() => "https://t.me/your_channel", []);
+  // ✅ ТВОЯ приватная ссылка на канал
+  const channelLink = useMemo(() => "https://t.me/+9Et87naJaKJmNDM6", []);
 
   async function check() {
     setView({ stage: "loading", msg: "Проверяем подписку…" });
@@ -70,7 +70,8 @@ export default function Page() {
         minHeight: "100vh",
         padding: 16,
         color: "rgba(255,255,255,0.92)",
-        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial"
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial",
+        background: "#0B0F1A"
       }}
     >
       <div style={{ maxWidth: 520, margin: "0 auto", paddingTop: 10 }}>{children}</div>
@@ -109,9 +110,8 @@ export default function Page() {
     </button>
   );
 
-  const Primary = ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+  const Primary = ({ children }: { children: React.ReactNode }) => (
     <button
-      onClick={onClick}
       style={{
         width: "100%",
         padding: "12px 14px",
@@ -150,7 +150,7 @@ export default function Page() {
       <Shell>
         <div style={{ marginTop: 10, marginBottom: 12, opacity: 0.9 }}>
           <div style={{ fontSize: 18, fontWeight: 650 }}>CryptoInvest</div>
-          <div style={{ fontSize: 13, opacity: 0.7 }}>Access Check</div>
+          <div style={{ fontSize: 13, opacity: 0.7 }}>Access</div>
         </div>
 
         <Card>
@@ -191,7 +191,7 @@ export default function Page() {
       <Card>
         <div style={{ fontSize: 17, fontWeight: 650 }}>Открыто ✅</div>
         <div style={{ marginTop: 8, opacity: 0.75, lineHeight: 1.45 }}>
-          Это “основной экран” приложения. Здесь можешь разместить любой контент.
+          Доступ подтверждён. Это основной экран приложения.
         </div>
 
         <div style={{ height: 14 }} />
