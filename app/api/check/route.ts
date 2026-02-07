@@ -23,7 +23,13 @@ function verifyTelegramInitData(initData: string, botToken: string) {
   const userStr = params.get("user");
   if (!userStr) return { ok: false as const, reason: "no_user" };
 
-  const user = JSON.parse(userStr);
+  let user: any;
+  try {
+    user = JSON.parse(userStr);
+  } catch {
+    return { ok: false as const, reason: "bad_user_json" };
+  }
+
   if (!user?.id) return { ok: false as const, reason: "no_user_id" };
 
   return { ok: true as const, user };
@@ -39,7 +45,7 @@ export async function POST(req: Request) {
     const channelId = process.env.CHANNEL_ID;
 
     if (!botToken || !channelId) {
-      return NextResponse.json({ ok: false, step: "env", error: "env_missing" });
+      return NextResponse.json({ ok: false, step: "env", error: "env_missing", need: ["BOT_TOKEN", "CHANNEL_ID"] });
     }
 
     const body = await req.json().catch(() => null);
