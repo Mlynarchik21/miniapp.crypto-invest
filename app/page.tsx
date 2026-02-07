@@ -26,7 +26,13 @@ function Dots({ speedMs = 520 }: { speedMs?: number }) {
     const t = setInterval(() => setN((x) => (x % 3) + 1), speedMs);
     return () => clearInterval(t);
   }, [speedMs]);
-  return <span style={{ display: "inline-block", width: 18 }}>{Array.from({ length: n }).map(() => ".").join("")}</span>;
+  return (
+    <span style={{ display: "inline-block", width: 18 }}>
+      {Array.from({ length: n })
+        .map(() => ".")
+        .join("")}
+    </span>
+  );
 }
 
 function clamp(n: number, min: number, max: number) {
@@ -94,9 +100,18 @@ export default function Page() {
         transition: "transform 120ms ease, filter 120ms ease",
         filter: "saturate(1.02)"
       }}
-      onMouseDown={(e) => ((e.currentTarget.style.transform = "scale(0.99)"), (e.currentTarget.style.filter = "saturate(1.1)"))}
-      onMouseUp={(e) => ((e.currentTarget.style.transform = "scale(1)"), (e.currentTarget.style.filter = "saturate(1.02)"))}
-      onMouseLeave={(e) => ((e.currentTarget.style.transform = "scale(1)"), (e.currentTarget.style.filter = "saturate(1.02)"))}
+      onMouseDown={(e) => {
+        e.currentTarget.style.transform = "scale(0.99)";
+        e.currentTarget.style.filter = "saturate(1.1)";
+      }}
+      onMouseUp={(e) => {
+        e.currentTarget.style.transform = "scale(1)";
+        e.currentTarget.style.filter = "saturate(1.02)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "scale(1)";
+        e.currentTarget.style.filter = "saturate(1.02)";
+      }}
     >
       {children}
     </button>
@@ -128,10 +143,9 @@ export default function Page() {
       t0 = t;
 
       setProgress((p) => {
-        // более длинные стадии
-        if (phase === "loading") return clamp(p + dt * 6.5, 2, 60);   // медленно до 60%
-        if (phase === "checking") return clamp(p + dt * 4.2, 60, 92); // ещё медленнее до 92%
-        return clamp(p + dt * 18, 92, 100);                            // мягко в 100%
+        if (phase === "loading") return clamp(p + dt * 6.5, 2, 60);
+        if (phase === "checking") return clamp(p + dt * 4.2, 60, 92);
+        return clamp(p + dt * 18, 92, 100);
       });
 
       raf = requestAnimationFrame(tick);
@@ -146,21 +160,21 @@ export default function Page() {
     setPhase("loading");
     setGateHint(null);
 
-    // Даем пользователю увидеть анимацию
     await new Promise((r) => setTimeout(r, 900));
     setPhase("checking");
 
     const initData = getInitData();
     const source = getStartAppSource();
 
-    // ещё немного времени на "checking" — чтобы анимация выглядела дороже
     await new Promise((r) => setTimeout(r, 1100));
 
     if (!initData) {
       setPhase("done");
       setProgress(100);
       await new Promise((r) => setTimeout(r, 550));
-      setGateHint("Похоже, приложение открылось без данных Telegram. Нажми Open внутри бота и попробуй снова.");
+      setGateHint(
+        "Похоже, приложение открылось без данных Telegram. Нажми Open внутри бота и попробуй снова."
+      );
       setScreen("gate");
       return;
     }
@@ -259,7 +273,9 @@ export default function Page() {
               />
             </div>
 
-            <div style={{ marginTop: 10, fontSize: 12, color: Muted2 }}>{Math.round(progress)}%</div>
+            <div style={{ marginTop: 10, fontSize: 12, color: Muted2 }}>
+              {Math.round(progress)}%
+            </div>
 
             <style>{`
               @keyframes spin {
@@ -273,7 +289,7 @@ export default function Page() {
     );
   }
 
-  // ===== Gate Screen (center, modern, no card) =====
+  // ===== Gate Screen (center, modern, no ID) =====
   if (screen === "gate") {
     return (
       <Shell>
@@ -285,7 +301,9 @@ export default function Page() {
           }}
         >
           <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
-            <div style={{ fontSize: 26, fontWeight: 850, letterSpacing: 0.2 }}>Упс</div>
+            <div style={{ fontSize: 26, fontWeight: 850, letterSpacing: 0.2 }}>
+              Упс
+            </div>
 
             <div style={{ marginTop: 10, fontSize: 14, color: Muted, lineHeight: 1.6 }}>
               Ты, похоже, ещё не подписался на наш канал.
@@ -298,7 +316,14 @@ export default function Page() {
             </div>
 
             {gateHint ? (
-              <div style={{ marginTop: 14, fontSize: 13, color: "rgba(255,255,255,0.52)", lineHeight: 1.55 }}>
+              <div
+                style={{
+                  marginTop: 14,
+                  fontSize: 13,
+                  color: "rgba(255,255,255,0.52)",
+                  lineHeight: 1.55
+                }}
+              >
                 {gateHint}
               </div>
             ) : null}
@@ -312,64 +337,83 @@ export default function Page() {
             <div style={{ height: 10 }} />
 
             <Btn onClick={checkSubscription}>Проверить подписку</Btn>
-
-            <div style={{ marginTop: 14, fontSize: 12, color: "rgba(255,255,255,0.32)" }}>
-              ID: {userId ?? "—"}
-            </div>
           </div>
         </div>
       </Shell>
     );
   }
 
-  // ===== Courses mock (strict, minimal) =====
+  // ===== Courses (empty / marketing check screen, centered, no ID) =====
   return (
     <Shell>
-      <div style={{ paddingTop: 18, paddingBottom: 8, display: "flex", alignItems: "baseline", gap: 10 }}>
-        <div style={{ fontSize: 18, fontWeight: 850, letterSpacing: 0.2 }}>Курсы</div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: Muted2 }}>ID: {userId ?? "—"}</div>
-      </div>
-
-      <div style={{ display: "grid", gap: 12 }}>
-        {[
-          { title: "Введение", desc: "Старт, база и правила." },
-          { title: "Практика", desc: "Задачи, примеры, разбор." },
-          { title: "Стратегии", desc: "Подходы и тестирование." }
-        ].map((c) => (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "0 12px"
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 420,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 14
+          }}
+        >
           <div
-            key={c.title}
             style={{
-              borderRadius: 18,
-              padding: 16,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)"
+              fontSize: 28,
+              fontWeight: 900,
+              letterSpacing: 0.3,
+              lineHeight: 1.2
             }}
           >
-            <div style={{ fontSize: 15, fontWeight: 850, letterSpacing: 0.2 }}>{c.title}</div>
-            <div style={{ marginTop: 6, fontSize: 13, color: Muted, lineHeight: 1.5 }}>{c.desc}</div>
+            Курсов здесь нет
+          </div>
 
-            <div style={{ height: 12 }} />
+          <div
+            style={{
+              fontSize: 14,
+              color: Muted,
+              lineHeight: 1.7
+            }}
+          >
+            Это была проверка нашей маркетинговой стратегии.
+            <br />
+            Спасибо, что прошёл этот путь до конца — ты помог нам протестировать гипотезу.
+          </div>
 
+          <div
+            style={{
+              fontSize: 13,
+              color: "rgba(255,255,255,0.52)",
+              lineHeight: 1.6
+            }}
+          >
+            Приносим извинения за возможные ожидания.
+            <br />
+            В ближайшее время здесь появится настоящий контент.
+          </div>
+
+          <div style={{ height: 6 }} />
+
+          <div style={{ width: "100%", maxWidth: 260 }}>
             <Btn
               variant="primary"
               onClick={() => {
-                alert("Это макет. Контент подключим позже.");
+                tg()?.close?.();
               }}
             >
-              Открыть
+              Закрыть приложение
             </Btn>
           </div>
-        ))}
-
-        <Btn onClick={checkSubscription}>Перепроверить подписку</Btn>
-
-        <Btn
-          onClick={() => {
-            tg()?.close?.();
-          }}
-        >
-          Закрыть
-        </Btn>
+        </div>
       </div>
     </Shell>
   );
